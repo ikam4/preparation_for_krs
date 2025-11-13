@@ -1,34 +1,51 @@
-Рюкзаки:
-Обычный рюкзак (сложность O(n*m))
+## Рюкзаки:
+
+### Обычный рюкзак (сложность O(n*m))
+
+Задача: дано ограничение по весу _W_, потом даны _n_ предметов, их веса в массиве _w_, а деньги за них в массиве _v_, надо найти макс кол-во денег.
+
+Реализуем двумерно (для восстановления ответа)
+
 ```cpp
-    //dp[w] — можно ли набрать вес w
-    vector<bool> dp(W + 1, false);
-    dp[0] = true;
-
-    // Для восстановления ответа
-    vector used(n, vector<bool>(W + 1, false));
-
-    for (int i = 0; i < n; ++i) {
-        for (int w = W; w >= weights[i]; --w) {
-            if (dp[w - weights[i]] && !dp[w]) {
-                dp[w] = true;
-                used[i][w] = true;
+    vector dp(n + 1, vector<int>(W + 1, 0));
+    for (int i = 1; i <= n; ++i) {
+        for (int cap = 0; cap <= W; ++cap) {
+            // Не берем i-й предмет
+            dp[i][cap] = dp[i - 1][cap];
+            // Берем i-й предмет (если помещается)
+            if (cap >= w[i - 1]) {
+                dp[i][cap] = max(dp[i][cap], dp[i - 1][cap - w[i - 1]] + v[i - 1]);
             }
         }
     }
-
-    // Находим максимальный вес, который можно набрать
-    int maxW = W;
-    while (maxW >= 0 && !dp[maxW]) --maxW;
-
-    cout << "Максимальный вес: " << maxW << endl;
-
-    // Восстановление ответа
-    vector<int> ans;
-    int currentW = maxW;
-    for (int i = n - 1; i >= 0; --i) {
-        if (used[i][currentW]) {
-            ans.push_back(i);
-            currentW -= weights[i];
+    // Восстановление набора предметов
+    vector<int> picked;
+    int cap = W;
+    for (int i = n; i >= 1; --i) {
+        // Проверяем, мог ли i-й предмет быть взят 
+        if (cap >= w[i - 1] && dp[i][cap] == dp[i - 1][cap - w[i - 1]] + v[i - 1]) {
+            picked.push_back(i);   // сохраняем 1-индексацию
+            cap -= w[i - 1];       // уменьшаем оставшуюся вместимость
         }
-  }```
+        // иначе i-й не брали, просто идем дальше
+    }
+    reverse(picked.begin(), picked.end());
+    cout << dp[n][W] << "\n";
+    for (int i = 0; i < (int)picked.size(); ++i) 
+        cout << picked[i] << ' ';
+```
+
+Ниже реализация без восстановления ответа, но оптимизированная до O(w) по памяти:
+
+```cpp
+ vector<int> dp(W + 1, 0);
+    for (int i = 0; i < n; ++i) {
+        // ВАЖНО: cap идем вниз, иначе возьмем предмет i более одного раза.
+        for (int cap = W; cap >= w[i]; --cap) {
+            dp[cap] = max(dp[cap], dp[cap - w[i]] + v[i]);
+        }
+    }
+    cout << dp[W] << "\n";
+```
+---
+### Ограниченный рюкзак (любой предмет может быть взят некоторое количество раз [дано в условии])
