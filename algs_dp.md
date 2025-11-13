@@ -217,30 +217,36 @@ for (int i = 0; i < (int)picked.size(); ++i)
 Реализуем решение наивно за O(n*n):
 ```cpp
 int n = arr.size();
-vector<int> dp(n, 1);       // dp[i] длина НВП, оканчивающейся в i
+vector<int> dp(n, 1);       // dp[i] — длина НВП, оканчивающейся в i
 vector<int> prev(n, -1);    // prev[i] — предыдущий индекс в НВП для восстановления
-// Основной DP
+
+// Основной DP: для каждого элемента i проверяем элементы j < i
+// и продолжаем возрастающую подпоследовательность
 for (int i = 0; i < n; i++) {
     for (int j = 0; j < i; j++) {
         if (arr[j] < arr[i] && dp[j] + 1 > dp[i]) {
-            dp[i] = dp[j] + 1;
-            prev[i] = j;
+            dp[i] = dp[j] + 1; // увеличиваем длину НВП
+            prev[i] = j;       // сохраняем предыдущий элемент
         }
     }
 }
+
 // Находим индекс конца НВП
 auto it = max_element(dp.begin(), dp.end());
-int lis_len = *it;
-int index = it - dp.begin();
+int lis_len = *it;           // длина НВП
+int index = it - dp.begin(); // индекс конца НВП
+
 // Восстанавливаем НВП
-vector<int> lis_sequence;
+vector<int> lis;
 while (index != -1) {
-    lis_sequence.push_back(arr[index]);
-    index = prev[index];
+    lis.push_back(arr[index]); // добавляем элемент
+    index = prev[index];       // идём к предыдущему элементу
 }
-reverse(lis_sequence.begin(), lis_sequence.end());
-cout << lis_sequence.size() << '\n';
-for (auto i: lis_sequence)
+reverse(lis.begin(), lis.end()); // переворачиваем для правильного порядка
+
+// Вывод результатов
+cout << lis.size() << '\n'; // длина НВП
+for (auto i : lis)           // сами элементы НВП
     cout << i << ' ';
 ```
 
