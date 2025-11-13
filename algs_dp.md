@@ -70,17 +70,27 @@ for (int i = 0; i < (int)picked.size(); ++i)
 
 Сначала реализуем наивно за O(n*W\*W), но с оптимизацией по памяти, используя только два слоя
 ```cpp
-vector<int> dp(W + 1, 0);
+vector<int> dp(W + 1, 0); // dp[cap] — максимальная ценность для вместимости cap
+
+// Обрабатываем каждый предмет
 for (int i = 0; i < n; ++i) {
-    vector<int> prev = dp; // состояние до использования предмета i
+    vector<int> prev = dp; // сохраняем состояние dp до использования предмета i
+
+    // Пробегаем по всем возможным вместимостям
     for (int cap = 0; cap <= W; ++cap) {
-        int best = prev[cap]; // k = 0 (не берем предмет i)
-        for (int k = 1; k <= min(c[i], cap / w[i]); ++k) { //ограничение либо по кол-ву предмета, либо по уже набранному весу
-            best = max(best, prev[cap - k * w[i]] + k * v[i]);
+        int best = prev[cap]; // k = 0, не берем предмет i
+
+        // Пробуем взять k штук предмета i, где k не превышает ограничения c[i]
+        // и вместимость cap позволяет взять k штук
+        for (int k = 1; k <= min(c[i], cap / w[i]); ++k) {
+            best = max(best, prev[cap - k * w[i]] + k * v[i]); // выбираем максимум
         }
-        dp[cap] = best;
+
+        dp[cap] = best; // обновляем dp для текущей вместимости
     }
 }
+
+// Выводим максимальную ценность для вместимости W
 cout << dp[W] << "\n";
 ```
 
@@ -89,27 +99,36 @@ cout << dp[W] << "\n";
 Если требуется максимизация веса, а не стоимости, можно оптимизировать до O(n*W), используя монотонную очередь
 (то есть решение неверно для приведенной выше задачи, но если надо было бы найти макс вес, то все бы работало).
 ```cpp
-vector<int> dp(W + 1, 0);
-for (int i = 0; i < n; ++i) {
-    vector<int> prev = dp;
-    for (int r = 0; r < w[i]; ++r) {
-        // Обрабатываем все cap одной арифм. прогрессии: cap = r + m*w[i], m = 0..M.
-        deque<pair<int,int>> dq; // (m', value = prev[r + m'*w] - m'*v), максимум — спереди
-        int M = (W - r) / w[i];
-        for (int m = 0; m <= M; ++m) {
-            int idx = r + m * w[i];
-            int val = prev[idx] - m * v[i];
-            // Вставляем текущий m' = m, поддерживая убывание по value
-            while (!dq.empty() && dq.back().second <= val) dq.pop_back();
-            dq.emplace_back(m, val); //можно юзать dq.push_back({m,val})
-            // Удаляем устаревшие m' < m - c[i], чтобы k = m - m' <= c[i]
-            while (!dq.empty() && dq.front().first < m - c[i]) dq.pop_front();
-            // Максимум в окне
-            dp[idx] = dq.front().second + m * v[i];
+   vector<int> dp(W + 1, 0); // dp[r] — максимальная ценность для вместимости r
+
+    for (int i = 0; i < n; ++i) {
+        vector<int> prev = dp; // сохраняем состояние до обработки текущего предмета
+
+        // Разбиваем все возможные вместимости по остаткам от деления на w[i]
+        // Это позволяет обрабатывать все cap вида r + m*w[i], m = 0..M
+        for (int r = 0; r < w[i]; ++r) {
+            deque<pair<int,int>> dq; // хранит пары (m', value), максимум в окне спереди
+            int M = (W - r) / w[i];  // максимальное количество предметов данного типа для остатка r
+
+            for (int m = 0; m <= M; ++m) {
+                int idx = r + m * w[i];           // фактическая вместимость
+                int val = prev[idx] - m * v[i];  // значение с учетом m предметов
+
+                // Поддерживаем убывающий порядок value в деке
+                while (!dq.empty() && dq.back().second <= val) dq.pop_back();
+                dq.emplace_back(m, val); // вставляем текущий m
+
+                // Удаляем устаревшие элементы из передней части дека
+                // чтобы не превышать ограничение по количеству c[i]
+                while (!dq.empty() && dq.front().first < m - c[i]) dq.pop_front();
+
+                // Максимум в текущем окне — спереди
+                dp[idx] = dq.front().second + m * v[i];
+            }
         }
     }
-}
-cout << dp[W] << "\n";
+
+    cout << dp[W] << "\n";
 ```
 ---
 ###  Неограниченный рюкзак
@@ -117,26 +136,34 @@ cout << dp[W] << "\n";
 
 От обычного рюкзака отличается только тем, что во внутреннем цикле мы бежим не от обратного, чтобы каждый элемент можно было использовать сколь угодно раз
 ```cpp
-vector<int> dp(W + 1, 0);
-vector<int> parent(W + 1, -1); // какой предмет последним положил оптимум в dp[cap]
+vector<int> dp(W + 1, 0);       // dp[cap] — максимальная ценность для вместимости cap
+vector<int> parent(W + 1, -1);  // parent[cap] — какой предмет последним положил оптимум
+
+// Основной DP для неограниченного рюкзака
 for (int i = 0; i < n; ++i) {
     for (int cap = w[i]; cap <= W; ++cap) {
+        // Рассматриваем возможность добавить текущий предмет i
         int cand = dp[cap - w[i]] + v[i];
         if (cand > dp[cap]) {
-            dp[cap] = cand;
-            parent[cap] = i;
+            dp[cap] = cand;       // обновляем максимум
+            parent[cap] = i;      // сохраняем индекс предмета, который дал этот максимум
         }
     }
 }
+
+// Вывод максимальной ценности
 cout << dp[W] << "\n";
-// Восстановление
+
+// Восстановление выбранных предметов
 vector<int> picked;
 int cap = W;
 while (cap > 0 && parent[cap] != -1) {
-    int p = parent[cap];
-    picked.push_back(p + 1); // переводим в 1-индексацию
-    cap -= w[p];
+    int p = parent[cap];           // предмет, который последним положили
+    picked.push_back(p + 1);       // переводим в 1-индексацию для удобного вывода
+    cap -= w[p];                   // уменьшаем вместимость на вес выбранного предмета
 }
+
+// Вывод выбранных предметов
 for (int i = 0; i < (int)picked.size(); ++i) 
     cout << picked[i] << ' ';
 ```
@@ -184,4 +211,38 @@ for (int i = 0; i < (int)picked.size(); ++i)
 ## Последовательности:
 
 ### НВП (наибольшая возрастающая подпоследовательность)
+
+Задача: в массиве _arr_ записаны числа, найти их НВП.
+
+Реализуем решение наивно за O(n*n):
+```cpp
+int n = arr.size();
+vector<int> dp(n, 1);       // dp[i] длина НВП, оканчивающейся в i
+vector<int> prev(n, -1);    // prev[i] — предыдущий индекс в НВП для восстановления
+// Основной DP
+for (int i = 0; i < n; i++) {
+    for (int j = 0; j < i; j++) {
+        if (arr[j] < arr[i] && dp[j] + 1 > dp[i]) {
+            dp[i] = dp[j] + 1;
+            prev[i] = j;
+        }
+    }
+}
+// Находим индекс конца НВП
+auto it = max_element(dp.begin(), dp.end());
+int lis_len = *it;
+int index = it - dp.begin();
+// Восстанавливаем НВП
+vector<int> lis_sequence;
+while (index != -1) {
+    lis_sequence.push_back(arr[index]);
+    index = prev[index];
+}
+reverse(lis_sequence.begin(), lis_sequence.end());
+cout << lis_sequence.size() << '\n';
+for (auto i: lis_sequence)
+    cout << i << ' ';
+```
+
+
 
