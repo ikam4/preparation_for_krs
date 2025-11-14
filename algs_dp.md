@@ -445,3 +445,82 @@ for (int x : ans) cout << x << " ";
 #### Сложность алгоритма
 - Время: `O(n^2 * 2^n)`  
 - Память: `O(n * 2^n)`  
+
+#### Пример реализации: 
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+const long long INF = 1e18;
+
+int main() {
+    int n;
+    cin >> n; // количество городов
+    vector dist(n, vector<long long>(n));
+    
+    for(int i = 0; i < n; ++i)
+        for(int j = 0; j < n; ++j){
+            cin >> dist[i][j];
+            if(dist[i][j] < 0) dist[i][j] = INF; // если пути нет
+        }
+
+    int FULL = 1 << n; // все возможные подмножества городов
+    vector dp(FULL, vector<long long>(n, INF));
+    vector parent(FULL, vector<int>(n, -1));
+
+    dp[1][0] = 0; // стартуем с города 0
+
+    // перебираем все подмножества городов
+    for(int mask = 1; mask < FULL; ++mask) {
+        for(int u = 0; u < n; ++u) {
+            if(!(mask & (1 << u))) continue; // город u не в маске
+            if(dp[mask][u] == INF) continue;
+
+            // пробуем добавить следующий город v
+            for(int v = 0; v < n; ++v) {
+                if(mask & (1 << v)) continue; // город уже в пути
+                if(dist[u][v] == INF) continue; // пути нет
+                int nmask = mask | (1 << v);
+                if(dp[mask][u] + dist[u][v] < dp[nmask][v]) {
+                    dp[nmask][v] = dp[mask][u] + dist[u][v];
+                    parent[nmask][v] = u;
+                }
+            }
+        }
+    }
+
+    // закрываем цикл, возвращаемся в старт
+    long long best = INF;
+    int last = -1;
+    for(int u = 0; u < n; ++u) {
+        if(dp[FULL-1][u] == INF || dist[u][0] == INF) continue;
+        long long cost = dp[FULL-1][u] + dist[u][0];
+        if(cost < best) {
+            best = cost;
+            last = u;
+        }
+    }
+
+    if(best == INF) {
+        cout << "NO SOLUTION\n";
+        return 0;
+    }
+
+    // восстановление пути
+    vector<int> path;
+    int mask = FULL-1, v = last;
+    while(v != -1) {
+        path.push_back(v);
+        int pv = parent[mask][v];
+        mask ^= (1 << v);
+        v = pv;
+    }
+    reverse(path.begin(), path.end());
+    path.push_back(0); // возвращение в старт
+
+    // вывод
+    cout << best << "\n";
+    for(int i = 0; i < path.size(); ++i) {
+        cout << (path[i] + 1) << ' '; // 1-based номера городов
+    }
+}
+```
