@@ -127,7 +127,7 @@ f3();
 
 - `throw expr` — создаёт объект исключения (copy или move)
 - `catch (const T&)` — без копирования
-- `catch (T)` — копия + slicing
+- `catch (T)` — копия + slicing (преобразование к типу T, т.е. потеря своего первоначального типа)
 - `throw;` — проброс без создания нового объекта
 
 ---
@@ -138,6 +138,7 @@ f3();
 - `std::exception`
 
 Основные ветки:
+- Системные исключения (`std::bad_cast`, `std::bad_alloc` и т.д.)
 - `std::logic_error`
 - `std::runtime_error`
 
