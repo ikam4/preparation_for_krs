@@ -157,6 +157,7 @@ public:
     virtual ~exception() noexcept;
 };
 ```
+Можно также наследоваться от `std::exception`, но придется переопределять метод `what()`.
 
 ---
 
